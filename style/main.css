@@ -1,0 +1,12 @@
+*::before,*,*::after{min-width:0;box-sizing:border-box;}
+html{font-family:Verdana;font-size:14px;}
+body{margin:0;}
+
+.tag {
+    display: inline-block;
+    font-weight: bold;
+    border: 2px solid #cbc18f;
+    background-color: #5a0008;
+    color: #fff;
+    padding: 0.25em;
+}
