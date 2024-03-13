@@ -1,4 +1,18 @@
 
+function roll({dc = 0, modifiers = 0} = {}) {
+    const flatResult = Math.floor(Math.random() * 20) + 1;
+    let diff = (flatResult + modifiers) - dc;
+    if (diff < 0) rate = -1;
+    if (diff >= 0) rate = 1;
+    if (diff >= 10) rate += 1;
+    if (diff <= 10) rate -= 1;
+    if (flatResult === 20) rate += 1;
+    if (flatResult === 1) rate -= 1;
+    if (rate > 2) rate = 2;
+    if (rate < -2) rate = -2;
+    return { result: flatResult + modifiers, rate: rate };
+}
+
 window.onload = _ => {
     
     const target = document.getElementById("ConditionsList");
