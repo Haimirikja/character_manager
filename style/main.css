@@ -9,4 +9,5 @@ body{margin:0;}
     background-color: #5a0008;
     color: #fff;
     padding: 0.25em;
+    cursor: default;
 }

@@ -13,20 +13,118 @@ function roll({dc = 0, modifiers = 0} = {}) {
     return { result: flatResult + modifiers, rate: rate };
 }
 
-window.onload = _ => {
-    
-    const target = document.getElementById("ConditionsList");
-    let conditionElement;
-    let conditionName;
-    conditions.forEach(condition => {
-        conditionElement = document.createElement("div");
+class Condition {
+    constructor(
+        name = "",
+        ref = "",
+        level = 0,
+    ) {
+        this.name = typeof name === 'string' ? name : "";
+        this.ref = typeof ref === 'string' ? ref : "";
+        this.level = typeof level === 'number' && level > 0 ? level : 0;
+    }
+
+    static parse = (object) => {
+        if (!(object instanceof Object)) return undefined;
+        return new ConditionRule(
+            object.name,
+            object.ref,
+            parseInt(object.level),
+        )
+    }
+
+    toHTML = () => {
+        const conditionElement = document.createElement("div");
         conditionElement.classList.add("tag");
-        conditionName = document.createElement("div");
+        const conditionName = document.createElement("div");
         conditionName.classList.add("tag-txt");
-        conditionName.innerText = condition.name;
+        conditionName.innerText = this.name;
         conditionElement.appendChild(conditionName);
-        target.appendChild(conditionElement);
-    });
+        return conditionElement;
+    }
+}
+
+class ConditionRule {
+    constructor(
+        name = "",
+        ref = "",
+        description = [],
+        overrides = [],
+        conditionsGained = [],
+        incremental = false,
+        objectOnly = false,
+    ) {
+        this.name = typeof name === 'string' ? name : "";
+        this.ref = typeof ref === 'string' ? ref : "";
+        this.description = Array.isArray(description) ? description.filter(x => typeof x === 'string') : [];
+        this.overrides = Array.isArray(overrides) ? overrides.filter(x => typeof x === 'string') : [];
+        this.conditionsGained = Array.isArray(conditionsGained) ? conditionsGained.filter(x => x instanceof Condition) : [];
+        this.incremental = typeof incremental === 'boolean' ? incremental : false;
+        this.objectOnly = typeof objectOnly === 'boolean' ? objectOnly : false;
+    }
+
+    static parse = (object) => {
+        if (!(object instanceof Object)) return undefined;
+        return new ConditionRule(
+            object.name,
+            object.ref,
+            object.description,
+            object.overrides,
+            object.conditionsGained?.map(x => Condition.parse(x)),
+            object.incremental,
+            object.objectOnly,
+        )
+    }
+
+    applyCondition = () => {
+        const conditionsGained = [];
+        const condition = new Condition(this.name, this.ref, 0);
+        if (this.incremental) {
+            condition.level = parseInt(promp("Livello della condizione?"));
+        }
+        conditionsGained.push(condition);
+        if (this.conditionsGained.length) this.conditionsGained.forEach(condition => conditionsGained.push(condition));
+        return this.conditionsGained;
+    }
+
+    toHTML = () => {
+        const conditionElement = document.createElement("div");
+        conditionElement.classList.add("tag");
+        const conditionName = document.createElement("div");
+        conditionName.classList.add("tag-txt");
+        conditionName.innerText = this.name;
+        conditionElement.appendChild(conditionName);
+        return conditionElement;
+    }
+}
+
+class ConditionManager {
+    listTargetId = "ConditionsList";
+    currentTargetId = "CurrentConditions";
+
+    constructor(conditions) {
+        this.conditions = [];
+        if (!Array.isArray(conditions)) return this;
+        conditions.forEach(condition => {
+            const currentLoopCondition = ConditionRule.parse(condition);
+            if (!(currentLoopCondition instanceof ConditionRule)) return;
+            this.conditions.push(currentLoopCondition);
+        });
+    }
+    
+    showList = () => {
+        const target = document.getElementById(this.listTargetId);
+        this.conditions.forEach(condition => {
+            target.appendChild(condition.toHTML());
+        });
+    }
+}
+
+window.onload = _ => {
+
+    const cm = new ConditionManager(conditions);
+    cm.showList();
+    
 }
 
 function createActionElement() {
