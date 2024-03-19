@@ -155,18 +155,21 @@ class ConditionRule {
                 callback_applyCondition(this);
                 callback_ShowApplyConditions();
             });
-            applyAction.innerText = "+";
+            applyAction.innerText = "✚";
             actionsElement.appendChild(applyAction);
         }
 
         const contentElement = document.createElement("div");
         contentElement.classList.add("toggle-content-target");
         contentElement.style.display = "none";
+        const contentInnerElement = document.createElement("div");
+        contentInnerElement.classList.add("rule-content");
+        contentElement.appendChild(contentInnerElement)
         let contentRow;
         this.description.forEach(row => {
-            contentRow = document.createElement("p");
+            contentRow = document.createElement("span");
             contentRow.innerText = row;
-            contentElement.appendChild(contentRow);
+            contentInnerElement.appendChild(contentRow);
         });
         ruleElement.appendChild(contentElement);
         
