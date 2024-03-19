@@ -1,16 +1,34 @@
 
-function roll({dc = 0, modifiers = 0} = {}) {
-    const flatResult = Math.floor(Math.random() * 20) + 1;
-    let diff = (flatResult + modifiers) - dc;
-    if (diff < 0) rate = -1;
-    if (diff >= 0) rate = 1;
-    if (diff >= 10) rate += 1;
-    if (diff <= 10) rate -= 1;
-    if (flatResult === 20) rate += 1;
-    if (flatResult === 1) rate -= 1;
-    if (rate > 2) rate = 2;
-    if (rate < -2) rate = -2;
-    return { result: flatResult + modifiers, rate: rate };
+class Dice {
+    constructor(faces = 6) {
+        faces = parseInt(faces);
+        this.faces = !isNaN(faces) && isFinite(faces) && faces > 1
+    }
+
+    roll = () => {
+        const flatResult = Math.floor(Math.random() * this.faces) + 1;
+        return { result: flatResult, dice: flatResult, rate: 0 };
+    };
+}
+
+class D20 extends Dice {
+    constructor() {
+        super(20);
+    }
+
+    roll = ({ modifier = 0, dc = 0 } = {}) => {
+        const flatResult = Math.floor(Math.random() * this.faces) + 1;
+        let diff = (flatResult + modifier) - dc;
+        if (diff < 0) rate = -1;
+        if (diff >= 0) rate = 1;
+        if (diff >= 10) rate += 1;
+        if (diff <= 10) rate -= 1;
+        if (flatResult === 20) rate += 1;
+        if (flatResult === 1) rate -= 1;
+        if (rate > 2) rate = 2;
+        if (rate < -2) rate = -2;
+        return { result: flatResult + modifier, dice: flatResult, rate: rate };
+    }
 }
 
 class Condition {
@@ -26,7 +44,7 @@ class Condition {
 
     static parse = (object) => {
         if (!(object instanceof Object)) return undefined;
-        return new ConditionRule(
+        return new Condition(
             object.name,
             object.ref,
             parseInt(object.level),
@@ -34,12 +52,34 @@ class Condition {
     }
 
     toHTML = () => {
+        const ruleElement = document.createElement("div");
+        ruleElement.classList.add("rule");
+
+        const ruleHeader = document.createElement("header");
+        ruleElement.appendChild(ruleHeader);
+        
         const conditionElement = document.createElement("div");
         conditionElement.classList.add("tag");
+        ruleHeader.appendChild(conditionElement);
+        
+        const actionsElement = document.createElement("div");
+        ruleHeader.appendChild(actionsElement);
+        
+        const conditionContent = document.createElement("div");
+        conditionContent.classList.add("tag-content");
+        conditionElement.appendChild(conditionContent);
+        
         const conditionName = document.createElement("div");
         conditionName.classList.add("tag-txt");
         conditionName.innerText = this.name;
-        conditionElement.appendChild(conditionName);
+        conditionContent.appendChild(conditionName);
+
+        if (this.level) {
+            const conditionLevel = document.createElement("div");
+            conditionLevel.classList.add("tag-lvl");
+            conditionLevel.innerText = this.level;
+            conditionContent.appendChild(conditionLevel);
+        }
         return conditionElement;
     }
 }
@@ -76,34 +116,71 @@ class ConditionRule {
         )
     }
 
-    applyCondition = () => {
-        const conditionsGained = [];
-        const condition = new Condition(this.name, this.ref, 0);
-        if (this.incremental) {
-            condition.level = parseInt(promp("Livello della condizione?"));
-        }
-        conditionsGained.push(condition);
-        if (this.conditionsGained.length) this.conditionsGained.forEach(condition => conditionsGained.push(condition));
-        return this.conditionsGained;
-    }
+    toHTML = ({ callback_toggleContent = null, callback_applyCondition = null, callback_ShowApplyConditions = null } = {}) => {
+        const ruleElement = document.createElement("div");
+        ruleElement.classList.add("rule");
+        ruleElement.id = this.ref;
 
-    toHTML = () => {
-        const conditionElement = document.createElement("div");
-        conditionElement.classList.add("tag");
-        const conditionName = document.createElement("div");
-        conditionName.classList.add("tag-txt");
-        conditionName.innerText = this.name;
-        conditionElement.appendChild(conditionName);
-        return conditionElement;
+        const ruleHeader = document.createElement("header");
+        ruleElement.appendChild(ruleHeader);
+
+        const tagElement = document.createElement("div");
+        tagElement.classList.add("tag");
+        ruleHeader.appendChild(tagElement);
+
+        const tagName = document.createElement("div");
+        tagName.classList.add("tag-txt");
+        tagName.innerText = this.name;
+        tagElement.appendChild(tagName);
+
+        const actionsElement = document.createElement("div");
+        actionsElement.classList.add("actions");
+        ruleHeader.appendChild(actionsElement);
+
+        if (callback_toggleContent) {
+            const toggleAction = document.createElement("div");
+            toggleAction.classList.add("action");
+            toggleAction.classList.add("toggle-content");
+            toggleAction.classList.add("open");
+            toggleAction.setAttribute("for", this.ref);
+            toggleAction.addEventListener('click', (e) => callback_toggleContent(e));
+            toggleAction.innerText = "▲";
+            actionsElement.appendChild(toggleAction);
+        }
+
+        if (callback_applyCondition) {
+            const applyAction = document.createElement("div");
+            applyAction.classList.add("action");
+            applyAction.addEventListener('click', _ => {
+                callback_applyCondition(this);
+                callback_ShowApplyConditions();
+            });
+            applyAction.innerText = "+";
+            actionsElement.appendChild(applyAction);
+        }
+
+        const contentElement = document.createElement("div");
+        contentElement.classList.add("toggle-content-target");
+        contentElement.style.display = "none";
+        let contentRow;
+        this.description.forEach(row => {
+            contentRow = document.createElement("p");
+            contentRow.innerText = row;
+            contentElement.appendChild(contentRow);
+        });
+        ruleElement.appendChild(contentElement);
+        
+        return ruleElement;
     }
 }
 
 class ConditionManager {
     listTargetId = "ConditionsList";
     currentTargetId = "CurrentConditions";
+    conditions = [];
+    appliedConditions = [];
 
     constructor(conditions) {
-        this.conditions = [];
         if (!Array.isArray(conditions)) return this;
         conditions.forEach(condition => {
             const currentLoopCondition = ConditionRule.parse(condition);
@@ -111,11 +188,65 @@ class ConditionManager {
             this.conditions.push(currentLoopCondition);
         });
     }
+
+    toggleContent = (event) => {
+        const sender = event.currentTarget;
+        const blockId = sender.getAttribute("for");
+        const target = sender.closest(`#${blockId}`)?.querySelector(`.toggle-content-target`);
+        if (sender.classList.contains("open")) {
+            sender.classList.toggle("open", false);
+            sender.classList.toggle("close", true);
+            target.style.display = 'block';
+        } else {
+            sender.classList.toggle("close", false);
+            sender.classList.toggle("open", true);
+            target.style.display = 'none';
+        }
+    }
+
+    applyCondition = (rule, level = 0) => {
+        let appliedCondition;
+        if (rule instanceof Condition) appliedCondition = rule;
+        else appliedCondition = new Condition(rule.name, rule.ref, !isNaN(level) && isFinite(level) && level > 0 ? level : 0);
+        if (rule.incremental && appliedCondition.level === 0) {
+            let conditionLevel = -1;
+            while(isNaN(conditionLevel) || conditionLevel < 0) {
+                conditionLevel = parseInt(prompt("Livello della condizione?"));
+            }
+            appliedCondition.level = conditionLevel;
+        }
+        if (this.appliedConditions.filter(x => x.ref === rule.ref).length > 0) {
+            if (rule.incremental) {
+                for (let index = 0; index < this.appliedConditions.length; index++) {
+                    if (this.appliedConditions[index].ref === rule.ref) {
+                        if (appliedCondition.level < 1) this.appliedConditions.splice(index,1);
+                        else if (appliedCondition.level > this.appliedConditions[index].level) this.appliedConditions[index].level = appliedCondition.level;
+                    }
+                }
+            }
+        }
+        else {
+            this.appliedConditions.push(appliedCondition);
+            if (rule.conditionsGained?.length) {
+                rule.conditionsGained.forEach(conditionGained => {
+                    const conditionRef = this.conditions.find(x => x.ref === conditionGained.ref);
+                    if (conditionRef && this.appliedConditions.filter(x => x.ref === conditionRef.ref).length === 0) this.applyCondition(conditionRef, conditionGained.level);
+                });
+            }
+        }
+    }
+
+    showAppliedConditions = () => {
+        const target = document.getElementById(this.currentTargetId);
+        target.innerHTML = "";
+        this.appliedConditions.forEach(appliedCondition => target.appendChild(appliedCondition.toHTML()));
+    }
     
     showList = () => {
         const target = document.getElementById(this.listTargetId);
-        this.conditions.forEach(condition => {
-            target.appendChild(condition.toHTML());
+        this.conditions.forEach(rule => {
+            const element = rule.toHTML({ callback_toggleContent: this.toggleContent, callback_applyCondition: this.applyCondition, callback_ShowApplyConditions: this.showAppliedConditions });
+            target.appendChild(element);
         });
     }
 }
@@ -258,6 +389,7 @@ const conditions = [
     {
         name: "Ferito",
         ref: "wounded",
+        incremental: true,
         description: [
             "Sei stato gravemente compromesso. Se perdi la condizione Morente, e non hai la condizione ferito, diventi ferito 1. Se l'hai già quando perdi la condizione Morente, il valore della tua condizione ferito aumenta di 1. Se ottieni la condizione Morente mentre sei ferito, aumenta il valore della condizione Morente del tuo valore di ferito.",
             "La condizione ferito termina se qualcuno ti fa recuperare con successo Punti Ferita con Curare Ferite, o se vieni riportato al tuo massimo di Punti Ferita e riposi per 10 minuti.",
@@ -302,7 +434,7 @@ const conditions = [
     {
         name: "Ingombrato",
         ref: "encumbered",
-        conditionsGained: [{ ref: "clumsy", value: 1 }],
+        conditionsGained: [{ ref: "clumsy", level: 1 }],
         description: [
             "Stai portando più peso di quello che puoi sopportare. Mentre sei ingombrato, sei Maldestro 1 e subisci penalità di -3 metri a tutte le tue Velocità, Come per tutte le penalità alla tua Velocità, questo non riduce la tua Velocità al di sotto di 1,5 metri.",
         ],

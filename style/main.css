@@ -2,12 +2,89 @@
 html{font-family:Verdana;font-size:14px;}
 body{margin:0;}
 
+.aside {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 1em;
+}
+.rule {
+    padding: 0 0.5em;
+}
+.rule:nth-child(odd){
+    background: #ded7bb;
+}
+.rule:nth-child(even){
+    background: #cbc18f;
+}
+.rule header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5em;
+}
+.rule header .actions {
+    padding: 4px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+    align-items: center;
+    gap: 0.5em;
+}
+.rule header .actions .action {
+    padding: 4px;
+    border-radius: 1em;
+    /* border: 1px solid #000000; */
+    cursor: pointer;
+}
+.rule header .actions .action.open{
+    content: "▲";
+    animation: 0.2s toggle-open linear forwards;
+}
+.rule header .actions .action.close{
+    content: "▼";
+    animation: 0.2s toggle-close linear forwards;
+}
 .tag {
     display: inline-block;
     font-weight: bold;
     border: 2px solid #cbc18f;
     background-color: #5a0008;
-    color: #fff;
+    color: #ffffff;
     padding: 0.25em;
     cursor: default;
+}
+.tag-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5em;
+}
+.tag-lvl {
+    font-size: 0.8em;
+    padding: 4px;
+    border-radius: 1em;
+    background: #ffffff;
+    line-height: calc(0.8em);
+    min-width: calc(1em + 4px);
+    height: calc(1em + 4px);
+    color: #000000;
+    text-align: center;
+}
+
+@keyframes toggle-open {
+    0% {rotate: 0deg;}
+    100% {rotate: 180deg;}
+}
+@keyframes toggle-close {
+    0% {rotate: 180deg;}
+    100% {rotate: 0deg;}
 }
