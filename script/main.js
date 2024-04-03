@@ -71,7 +71,7 @@ class Condition {
         
         const conditionName = document.createElement("div");
         conditionName.classList.add("tag-txt");
-        conditionName.innerText = this.name;
+        conditionName.innerText = this.name === "" ? conditions.filter(x => x.ref === this.ref).name : this.name;
         conditionContent.appendChild(conditionName);
 
         if (this.level) {
@@ -162,6 +162,13 @@ class ConditionRule {
         const contentElement = document.createElement("div");
         contentElement.classList.add("toggle-content-target");
         contentElement.style.display = "none";
+        if (this.conditionsGained.length > 0) {
+            const relatedConditionElement = document.createElement("div");
+            this.conditionsGained.forEach(condition => {
+                relatedConditionElement.appendChild(condition.toHTML());
+            });
+            contentElement.appendChild(relatedConditionElement);
+        }
         const contentInnerElement = document.createElement("div");
         contentInnerElement.classList.add("rule-content");
         contentElement.appendChild(contentInnerElement)
@@ -177,18 +184,20 @@ class ConditionRule {
     }
 }
 
+const conditions = [];
+
 class ConditionManager {
     listTargetId = "ConditionsList";
     currentTargetId = "CurrentConditions";
-    conditions = [];
+    //conditions = [];
     appliedConditions = [];
 
-    constructor(conditions) {
-        if (!Array.isArray(conditions)) return this;
-        conditions.forEach(condition => {
+    constructor(conditionsList) {
+        if (!Array.isArray(conditionsList)) return this;
+        conditionsList.forEach(condition => {
             const currentLoopCondition = ConditionRule.parse(condition);
             if (!(currentLoopCondition instanceof ConditionRule)) return;
-            this.conditions.push(currentLoopCondition);
+            conditions.push(currentLoopCondition);
         });
     }
 
@@ -232,7 +241,7 @@ class ConditionManager {
             this.appliedConditions.push(appliedCondition);
             if (rule.conditionsGained?.length) {
                 rule.conditionsGained.forEach(conditionGained => {
-                    const conditionRef = this.conditions.find(x => x.ref === conditionGained.ref);
+                    const conditionRef = conditions.find(x => x.ref === conditionGained.ref);
                     if (conditionRef && this.appliedConditions.filter(x => x.ref === conditionRef.ref).length === 0) this.applyCondition(conditionRef, conditionGained.level);
                 });
             }
@@ -247,7 +256,7 @@ class ConditionManager {
     
     showList = () => {
         const target = document.getElementById(this.listTargetId);
-        this.conditions.forEach(rule => {
+        conditions.forEach(rule => {
             const element = rule.toHTML({ callback_toggleContent: this.toggleContent, callback_applyCondition: this.applyCondition, callback_ShowApplyConditions: this.showAppliedConditions });
             target.appendChild(element);
         });
@@ -256,7 +265,7 @@ class ConditionManager {
 
 window.onload = _ => {
 
-    const cm = new ConditionManager(conditions);
+    const cm = new ConditionManager(conditionsList);
     cm.showList();
     
 }
@@ -289,7 +298,7 @@ function createActionElement() {
     return actionElement;
 }
 
-const conditions = [
+const conditionsList = [
     {
         name: "Abbagliato",
         ref: "dazzled",
