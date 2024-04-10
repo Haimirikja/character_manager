@@ -51,7 +51,9 @@ class Condition {
         )
     }
 
-    toHTML = () => {
+    toHTML = ({
+        callback_removeCondition = null,
+    } = {}) => {
         const ruleElement = document.createElement("div");
         ruleElement.classList.add("rule");
 
@@ -71,7 +73,7 @@ class Condition {
         
         const conditionName = document.createElement("div");
         conditionName.classList.add("tag-txt");
-        conditionName.innerText = this.name === "" ? conditions.filter(x => x.ref === this.ref).name : this.name;
+        conditionName.innerText = this.name === "" ? conditions.filter(x => x.ref.toLowerCase() === this.ref.toLowerCase())?.pop().name : this.name;
         conditionContent.appendChild(conditionName);
 
         if (this.level) {
@@ -79,6 +81,17 @@ class Condition {
             conditionLevel.classList.add("tag-lvl");
             conditionLevel.innerText = this.level;
             conditionContent.appendChild(conditionLevel);
+        }
+
+        if (callback_removeCondition) {
+            const removeAction = document.createElement("div");
+            removeAction.classList.add("tag-action");
+            removeAction.innerText = "[⚊]"
+            removeAction.addEventListener('click', _ => {
+                console.log(this);
+                callback_removeCondition(this);
+            });
+            conditionContent.appendChild(removeAction);
         }
         return conditionElement;
     }
@@ -116,7 +129,10 @@ class ConditionRule {
         )
     }
 
-    toHTML = ({ callback_toggleContent = null, callback_applyCondition = null, callback_ShowApplyConditions = null } = {}) => {
+    toHTML = ({
+        callback_toggleContent = null,
+        callback_applyCondition = null,
+    } = {}) => {
         const ruleElement = document.createElement("div");
         ruleElement.classList.add("rule");
         ruleElement.id = this.ref;
@@ -153,7 +169,6 @@ class ConditionRule {
             applyAction.classList.add("action");
             applyAction.addEventListener('click', _ => {
                 callback_applyCondition(this);
-                callback_ShowApplyConditions();
             });
             applyAction.innerText = "✚";
             actionsElement.appendChild(applyAction);
@@ -246,18 +261,29 @@ class ConditionManager {
                 });
             }
         }
+        this.showAppliedConditions();
+    }
+
+    removeCondition = (rule) => {
+        this.appliedConditions = this.appliedConditions.filter(x => x.ref !== rule.ref);
+        this.showAppliedConditions();
     }
 
     showAppliedConditions = () => {
         const target = document.getElementById(this.currentTargetId);
         target.innerHTML = "";
-        this.appliedConditions.forEach(appliedCondition => target.appendChild(appliedCondition.toHTML()));
+        this.appliedConditions.forEach(appliedCondition => target.appendChild(appliedCondition.toHTML({
+            callback_removeCondition: this.removeCondition,
+        })));
     }
     
     showList = () => {
         const target = document.getElementById(this.listTargetId);
         conditions.forEach(rule => {
-            const element = rule.toHTML({ callback_toggleContent: this.toggleContent, callback_applyCondition: this.applyCondition, callback_ShowApplyConditions: this.showAppliedConditions });
+            const element = rule.toHTML({
+                callback_toggleContent: this.toggleContent,
+                callback_applyCondition: this.applyCondition,
+            });
             target.appendChild(element);
         });
     }
@@ -409,7 +435,7 @@ const conditionsList = [
     },
     {
         name: "Immobilizzato",
-        ref: "Immobilized",
+        ref: "immobilized",
         description: [
             "Non puoi usare azioni col tratto movimento. Se sei immobilizzato da qualcosa che ti tiene fermo e una forza esterna ti muoverebbe fuori dal tuo quadretto, questa deve superare una prova contro la CD dell'effetto che ti blocca o la difesa appropriata (in genere la CD di Tempra) di un mostro che ti blocca.",
         ],
